@@ -53,7 +53,14 @@ def load_data():
         print(f"Error loading data: {e}")
         return None, None
 
-movies_df, cosine_sim = load_data()
+_movies_df = None
+_cosine_sim = None
+
+def get_data():
+    global _movies_df, _cosine_sim
+    if _movies_df is None:
+        _movies_df, _cosine_sim = load_data()
+    return _movies_df, _cosine_sim
 
 def get_poster(movie_id):
     try:
@@ -70,8 +77,14 @@ def get_poster(movie_id):
 def index():
     return render_template('index.html')
 
+@app.route('/api/health')
+def health():
+    return jsonify({"status": "alive"})
+
 @app.route('/api/trending')
 def trending():
+    movies_df, _ = get_data()
+    if movies_df is None: return jsonify({"error": "Data load failed"}), 500
     top = movies_df.sort_values('popularity', ascending=False).head(10)
     results = []
     for _, row in top.iterrows():
@@ -84,6 +97,8 @@ def trending():
 
 @app.route('/api/genres')
 def genres():
+    movies_df, _ = get_data()
+    if movies_df is None: return jsonify({"error": "Data load failed"}), 500
     all_genres = set()
     for gs in movies_df['genres_list']:
         all_genres.update(gs)
@@ -91,6 +106,8 @@ def genres():
 
 @app.route('/api/genre/<genre>')
 def genre_movies(genre):
+    movies_df, _ = get_data()
+    if movies_df is None: return jsonify({"error": "Data load failed"}), 500
     mask = movies_df['genres_list'].apply(lambda x: genre in x)
     filtered = movies_df[mask].sort_values('popularity', ascending=False).head(10)
     results = []
@@ -104,6 +121,8 @@ def genre_movies(genre):
 
 @app.route('/api/top-rated')
 def top_rated():
+    movies_df, _ = get_data()
+    if movies_df is None: return jsonify({"error": "Data load failed"}), 500
     top = movies_df.sort_values('vote_average', ascending=False).head(10)
     results = []
     for _, row in top.iterrows():
@@ -116,6 +135,8 @@ def top_rated():
 
 @app.route('/api/movie/<int:movie_id>')
 def movie_details(movie_id):
+    movies_df, _ = get_data()
+    if movies_df is None: return jsonify({"error": "Data load failed"}), 500
     row = movies_df[movies_df['id'] == movie_id]
     if row.empty:
         return jsonify({"error": "Not found"}), 404
@@ -134,6 +155,8 @@ def movie_details(movie_id):
 
 @app.route('/api/recommend')
 def recommend():
+    movies_df, cosine_sim = get_data()
+    if movies_df is None: return jsonify({"error": "Data load failed"}), 500
     title = request.args.get('title')
     try:
         idx = movies_df[movies_df['title_x'].str.contains(title, case=False)].index[0]
