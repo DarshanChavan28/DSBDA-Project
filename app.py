@@ -5,12 +5,20 @@ import ast
 import html
 import concurrent.futures
 import streamlit.components.v1 as components
+import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 TMDB_API_KEY = "92652e0ae1066082e5d33800cd26f207"
 
 st.set_page_config(page_title="Premium Streaming Dashboard", layout="wide", initial_sidebar_state="collapsed")
+
+# Debug: Check if files exist
+for f in ["tmdb_5000_movies.csv", "tmdb_5000_credits.csv"]:
+    if os.path.exists(f):
+        print(f"DEBUG: Found {f}")
+    else:
+        print(f"DEBUG: MISSING {f}!!")
 
 # Inject Base Custom CSS
 st.markdown("""
@@ -180,7 +188,7 @@ def movie_modal(movie_row):
     
     col1, col2 = st.columns([1, 2])
     with col1:
-        st.image(poster_url, use_container_width=True)
+        st.image(poster_url, width="stretch")
     with col2:
         st.markdown(f"<h1 style='margin-bottom:0;'>{movie_row['title_x']}</h1>", unsafe_allow_html=True)
         
@@ -214,7 +222,7 @@ def display_movie_grid(movies_list):
         for col, (_, row) in zip(cols, batch.iterrows()):
             with col:
                 poster_url, _ = get_tmdb_assets(row['id'], row.get('title_x', ''))
-                st.image(poster_url, use_container_width=True)
+                st.image(poster_url, width="stretch")
                 st.markdown(f"<div style='text-align: center; font-weight: 700; font-size: 14px; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #ddd;' title=\"{row['title_x']}\">{row['title_x']}</div>", unsafe_allow_html=True)
                 if st.button("View Details", key=f"btn_{row['id']}_{i}"):
                     movie_modal(row)
@@ -403,7 +411,7 @@ elif page == "Home":
     movie_list = movies_df['title_x'].values
     selected_movie = st.selectbox("Search for a movie you like to get smart recommendations:", movie_list)
     
-    if st.button("Generate Recommendations", use_container_width=False):
+    if st.button("Generate Recommendations", width="content"):
         idx = movies_df[movies_df['title_x'] == selected_movie].index[0]
         sim_scores = list(enumerate(cosine_sim[idx]))
         sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)[1:6]
