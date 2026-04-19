@@ -7,7 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
 TMDB_API_KEY = "92652e0ae1066082e5d33800cd26f207"
 
