@@ -130,8 +130,29 @@ def load_data():
     movies['cast_list'] = movies['cast'].apply(get_cast)
     movies['director'] = movies['crew'].apply(get_director)
 
-    tfidf = TfidfVectorizer(stop_words='english')
-    tfidf_matrix = tfidf.fit_transform(movies['overview'])
+    # Build combined tags from all content features for better recommendations
+    def make_tags(row):
+        parts = []
+        # Overview text
+        parts.append(str(row['overview']) if pd.notna(row['overview']) else '')
+        # Genres repeated 3x for higher weight
+        genres = row['genres_list'] if isinstance(row['genres_list'], list) else []
+        parts.append((' '.join(genres) + ' ') * 3)
+        # Keywords repeated 2x for higher weight
+        kw = row['keywords_list'] if isinstance(row['keywords_list'], list) else []
+        parts.append((' '.join(kw) + ' ') * 2)
+        # Cast names joined without spaces so each name is a single token
+        cast = row['cast_list'] if isinstance(row['cast_list'], list) else []
+        parts.append(' '.join([c.replace(' ', '') for c in cast]))
+        # Director repeated 2x for weight
+        director = str(row['director']) if pd.notna(row['director']) else ''
+        parts.append((director.replace(' ', '') + ' ') * 2)
+        return ' '.join(parts)
+
+    movies['tags'] = movies.apply(make_tags, axis=1)
+
+    tfidf = TfidfVectorizer(stop_words='english', max_features=5000)
+    tfidf_matrix = tfidf.fit_transform(movies['tags'])
     cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
 
     movies['search_corpus'] = (
